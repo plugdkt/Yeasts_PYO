@@ -69,6 +69,14 @@ function partial(string $__partial, array $vars = []): void
     require __DIR__ . "/../views/partials/$__partial.php";
 }
 
+/** สคริปต์ท้ายหน้าที่ partial ต้องการ (partial ไม่มีขอบเขตตัวแปรร่วมกับ layout) */
+function page_scripts(?string $add = null): string
+{
+    static $buf = '';
+    if ($add !== null) $buf .= $add;
+    return $buf;
+}
+
 function abort(int $code = 404, string $msg = 'ไม่พบหน้าที่ต้องการ'): never
 {
     http_response_code($code);

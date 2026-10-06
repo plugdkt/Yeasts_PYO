@@ -130,11 +130,8 @@ $text = fn($s) => $s ? nl2br(e($s)) : '<span class="text-muted">–</span>';
         <a target="_blank" rel="noopener" href="https://pubmed.ncbi.nlm.nih.gov/?term=<?= urlencode('"' . $sp['genus'] . ' ' . $sp['epithet'] . '"') ?>">PubMed</a></div>
     <?php endif; ?>
 
-    <h2 class="section-title h5" id="images">รูปภาพ</h2>
-    <?php if ($images): ?><div class="row g-2 gallery"><?php foreach ($images as $im): ?>
-      <div class="col-6 col-md-3"><a href="<?= url($im['file_path']) ?>" target="_blank"><img src="<?= url($im['file_path']) ?>" alt="<?= e($im['caption']) ?>" loading="lazy"></a>
-        <div class="small text-muted"><?= e($im['caption']) ?></div></div>
-    <?php endforeach; ?></div><?php else: ?><p class="text-muted">ยังไม่มีรูปภาพ</p><?php endif; ?>
+    <h2 class="section-title h5" id="images">รูปภาพ <?= $images ? '<span class="badge text-bg-success">' . count($images) . '</span>' : '' ?></h2>
+    <?php partial('gallery', ['images' => $images]); ?>
 
     <h2 class="section-title h5" id="bibliography">Bibliography</h2>
     <?php if ($bib): ?><ol class="small"><?php foreach ($bib as $b): ?>

@@ -191,12 +191,28 @@ CREATE TABLE IF NOT EXISTS species_bibliography (
 
 -- ---------- รูปภาพ ----------
 CREATE TABLE IF NOT EXISTS images (
-  id          INT AUTO_INCREMENT PRIMARY KEY,
-  species_id  INT,
-  strain_id   INT,
-  file_path   VARCHAR(255) NOT NULL,
-  caption     VARCHAR(255),
-  created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  id              INT AUTO_INCREMENT PRIMARY KEY,
+  species_id      INT,
+  strain_id       INT,
+  image_type      ENUM('colony','cell','hyphae','spore','other') NOT NULL DEFAULT 'other',
+  file_path       VARCHAR(255) NOT NULL,
+  thumb_path      VARCHAR(255),
+  width           INT,
+  height          INT,
+  caption         VARCHAR(255),
+  medium          VARCHAR(100),                 -- อาหารเลี้ยงเชื้อ
+  incubation_temp VARCHAR(20),                  -- °C
+  incubation_days VARCHAR(20),
+  technique       VARCHAR(60),                  -- bright field, phase contrast, DIC, stereo, plate photo
+  magnification   VARCHAR(30),
+  scale_bar       VARCHAR(30),
+  photographer    VARCHAR(150),
+  taken_date      DATE,
+  credit          VARCHAR(255),                 -- เครดิตเมื่อเป็นรูปจากแหล่งอื่น
+  license         VARCHAR(50),                  -- NULL = ใช้สัญญาอนุญาตของฐานข้อมูล
+  sort_order      INT NOT NULL DEFAULT 0,
+  created_by      INT,
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (species_id) REFERENCES species(id) ON DELETE CASCADE,
   FOREIGN KEY (strain_id)  REFERENCES strains(id) ON DELETE CASCADE
 ) ENGINE=InnoDB;

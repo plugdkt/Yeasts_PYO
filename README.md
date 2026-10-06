@@ -28,11 +28,21 @@ docker compose up -d --build
 
 ## ติดตั้งบนเซิร์ฟเวอร์ (Apache + PHP 8.1+ + MySQL)
 
-1. ต้องมี extension `pdo_mysql`, `curl`, `mbstring`, `fileinfo` และเปิด `mod_rewrite` (`AllowOverride All`)
+1. ต้องมี extension `pdo_mysql`, `curl`, `mbstring`, `fileinfo`, `gd` (สร้างภาพย่อ — ถ้าไม่มีระบบจะใช้ไฟล์ต้นฉบับแทน), `exif` และเปิด `mod_rewrite` (`AllowOverride All`)
+   ตั้ง `upload_max_filesize = 10M`, `post_max_size` ≥ 100M, `max_file_uploads = 20` เพื่ออัปโหลดรูปหลายไฟล์พร้อมกัน
 2. ตั้ง DocumentRoot ไปที่โฟลเดอร์ `public/` (ถ้าทำไม่ได้ ให้วางทั้งโปรเจกต์ไว้นอก web root แล้ว symlink `public/`)
 3. สร้างฐานข้อมูล แล้ว import `database/schema.sql` และ `database/seed.sql`
 4. สร้าง `config.local.php` ตามด้านบน และให้ web server เขียนโฟลเดอร์ `public/uploads/` ได้
 5. ก่อนเปิดใช้งานจริง ลบข้อมูลตัวอย่างด้วย `database/remove_demo.sql`
+6. **สำรองข้อมูล** ต้องเก็บทั้งฐานข้อมูล (mysqldump) และโฟลเดอร์ `public/uploads/` (รูปภาพไม่อยู่ใน Git)
+
+## อัปเดตฐานข้อมูลที่ติดตั้งไว้แล้ว
+
+รันไฟล์ใน `database/migrations/` ที่ยังไม่เคยรัน ตามลำดับเลข เช่น
+
+```bash
+docker exec -i yeastpyo_db mariadb -uyeast -pyeast_pass yeast_pyo < database/migrations/003_image_metadata.sql
+```
 
 ## โครงสร้าง
 
@@ -40,7 +50,8 @@ docker compose up -d --build
 public/index.php        router (ทุก request ผ่านไฟล์นี้)
 src/public_pages.php    หน้าสาธารณะ + export + login/setup
 src/admin_pages.php     ส่วนทีมวิจัย: CRUD, ผลทดสอบ, อัปโหลดรูป, นำเข้า CSV, ผู้ใช้
-src/ncbi.php            NCBI E-utilities (taxonomy, GenBank, ลิงก์ BLAST)
+src/ncbi.php            NCBI E-utilities (taxonomy, GenBank, ลิงก์ BLAST, D1/D2 type strain)
+src/images.php          รูปภาพ: ตรวจไฟล์, ภาพย่อ, ข้อมูลประกอบรูป
 views/                  template (layout.php, หน้าต่าง ๆ, admin/, partials/)
 database/               schema.sql, seed.sql, remove_demo.sql
 ```

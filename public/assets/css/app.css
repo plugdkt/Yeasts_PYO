@@ -70,3 +70,4 @@ a { color: var(--pyo-green-2); }
   .hero { padding: 2rem 0 3.5rem; }
   .stat-card .num { font-size: 1.5rem; }
 }
+.gal-item img { cursor: zoom-in; transition: transform .15s; } .gal-item:hover img { transform: scale(1.02); }

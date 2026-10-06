@@ -81,11 +81,7 @@ $row = function ($label, $value, $raw = false) {
   <?php if (is_logged_in()): ?><a class="btn btn-sm btn-outline-secondary ms-2" href="<?= url('admin/phenotype/strain/' . $st['id']) ?>"><i class="bi bi-pencil"></i> กรอกผลทดสอบ</a><?php endif; ?></h2>
 <?php partial('pheno_table', ['pheno' => $pheno, 'compare' => $pheno_sp ?: null]); ?>
 
-<?php if ($images): ?>
-<h2 class="section-title h5">รูปภาพ</h2>
-<div class="row g-2 gallery"><?php foreach ($images as $im): ?>
-  <div class="col-6 col-md-3"><a href="<?= url($im['file_path']) ?>" target="_blank"><img src="<?= url($im['file_path']) ?>" alt="<?= e($im['caption']) ?>" loading="lazy"></a>
-    <div class="small text-muted"><?= e($im['caption']) ?></div></div>
-<?php endforeach; ?></div>
-<?php endif; ?>
+<h2 class="section-title h5" id="images">รูปภาพ <?= $images ? '<span class="badge text-bg-success">' . count($images) . '</span>' : '' ?>
+  <?php if (is_logged_in()): ?><a class="btn btn-sm btn-outline-secondary ms-2" href="<?= url('admin/strain/' . $st['id']) ?>#images"><i class="bi bi-upload"></i> เพิ่มรูป</a><?php endif; ?></h2>
+<?php partial('gallery', ['images' => $images]); ?>
 <?php if ($points) $scripts = '<script>PYOMap("stmap", ' . json_encode($points, JSON_UNESCAPED_UNICODE | JSON_HEX_TAG) . ', {legend:false, cluster:false, scroll:false});</script>'; ?>

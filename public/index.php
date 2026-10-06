@@ -5,6 +5,7 @@ require __DIR__ . '/../src/helpers.php';
 require __DIR__ . '/../src/db.php';
 require __DIR__ . '/../src/auth.php';
 require __DIR__ . '/../src/ncbi.php';
+require __DIR__ . '/../src/images.php';
 require __DIR__ . '/../src/public_pages.php';
 require __DIR__ . '/../src/admin_pages.php';
 
@@ -21,7 +22,11 @@ $path = '/' . trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
 $base = rtrim(config('base_url'), '/');
 if ($base && str_starts_with($path, $base)) $path = substr($path, strlen($base)) ?: '/';
 $method = $_SERVER['REQUEST_METHOD'];
-if ($method === 'POST') csrf_check();
+if ($method === 'POST') {
+    csrf_check();
+    // ตัดไบต์ที่ไม่ใช่ UTF-8 ทิ้ง ป้องกันฐานข้อมูลปฏิเสธข้อมูลจาก client ที่เข้ารหัสผิด
+    array_walk_recursive($_POST, function (&$v) { if (is_string($v)) $v = mb_scrub($v, 'UTF-8'); });
+}
 
 $routes = [
     // สาธารณะ
@@ -55,6 +60,7 @@ $routes = [
     ['GET',  '#^/admin/phenotype/(species|strain)/(\d+)$#',  'admin_phenotype_form'],
     ['POST', '#^/admin/phenotype/(species|strain)/(\d+)$#',  'admin_phenotype_save'],
     ['POST', '#^/admin/image/(species|strain)/(\d+)$#', 'admin_image_upload'],
+    ['POST', '#^/admin/image/(\d+)/update$#',           'admin_image_update'],
     ['POST', '#^/admin/image/(\d+)/delete$#',           'admin_image_delete'],
     ['GET',  '#^/admin/import$#',                       'admin_import_form'],
     ['POST', '#^/admin/import$#',                       'admin_import_do'],

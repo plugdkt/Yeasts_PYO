@@ -91,5 +91,6 @@ $nav = fn(string $p) => ($p === '/' ? $path === '/' : str_starts_with($path, $p)
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 <?php endif; ?>
 <?= $scripts ?? '' ?>
+<?= page_scripts() ?>
 </body>
 </html>

@@ -34,7 +34,7 @@ function admin_species_form(string $id): void
     if (!$sp) abort();
     $synonyms = $sp['id'] ? q_all('SELECT * FROM synonyms WHERE species_id = ?', [$id]) : [];
     $bib = $sp['id'] ? q_all('SELECT b.* FROM bibliography b JOIN species_bibliography x ON x.bib_id = b.id WHERE x.species_id = ? ORDER BY b.year', [$id]) : [];
-    $images = $sp['id'] ? q_all('SELECT * FROM images WHERE species_id = ?', [$id]) : [];
+    $images = $sp['id'] ? q_all('SELECT * FROM images WHERE species_id = ? ORDER BY sort_order, id', [$id]) : [];
     view('admin/species_form', compact('sp', 'synonyms', 'bib', 'images') + ['title' => $sp['id'] ? 'แก้ไข ' . $sp['genus'] . ' ' . $sp['epithet'] : 'เพิ่มชนิดใหม่']);
 }
 
@@ -162,7 +162,7 @@ function admin_strain_form(string $id): void
         $st['is_type_strain'] = empty($old['is_type_strain']) ? 0 : 1;
     }
     $sequences = $st['id'] ? q_all('SELECT * FROM sequences WHERE strain_id = ? ORDER BY locus', [$id]) : [];
-    $images = $st['id'] ? q_all('SELECT * FROM images WHERE strain_id = ?', [$id]) : [];
+    $images = $st['id'] ? q_all('SELECT * FROM images WHERE strain_id = ? ORDER BY sort_order, id', [$id]) : [];
     view('admin/strain_form', compact('st', 'sequences', 'images') + lookup_lists()
         + ['title' => $st['id'] ? 'แก้ไข ' . $st['strain_code'] : 'เพิ่มสายพันธุ์ใหม่']);
 }
@@ -320,28 +320,56 @@ function admin_phenotype_save(string $type, string $id): void
 }
 
 // ---------------- Images ----------------
+function image_back(array $img): string
+{
+    return $img['species_id'] ? "admin/species/{$img['species_id']}#images" : "admin/strain/{$img['strain_id']}#images";
+}
+
+/** อัปโหลดได้หลายไฟล์พร้อมกัน ใช้ข้อมูลประกอบชุดเดียวกัน */
 function admin_image_upload(string $type, string $id): void
 {
     require_login();
-    $f = $_FILES['image'] ?? null;
-    $back = $type === 'species' ? "admin/species/$id" : "admin/strain/$id";
-    if (!$f || $f['error'] !== UPLOAD_ERR_OK || $f['size'] > config('upload_max')) {
-        flash('อัปโหลดไม่สำเร็จ (ไฟล์ต้องไม่เกิน 10 MB)', 'danger');
+    $back = ($type === 'species' ? "admin/species/$id" : "admin/strain/$id") . '#images';
+    $exists = q_val($type === 'species' ? 'SELECT 1 FROM species WHERE id = ?' : 'SELECT 1 FROM strains WHERE id = ?', [$id]);
+    if (!$exists) abort();
+    $files = [];
+    $up = $_FILES['images'] ?? null;
+    if ($up && is_array($up['name'])) {
+        foreach ($up['name'] as $i => $n) {
+            if ($up['error'][$i] === UPLOAD_ERR_NO_FILE) continue;
+            $files[] = ['name' => $n, 'tmp_name' => $up['tmp_name'][$i], 'error' => $up['error'][$i], 'size' => $up['size'][$i]];
+        }
+    }
+    if (!$files) {
+        // เมื่อขนาดรวมเกิน post_max_size PHP จะทิ้งข้อมูลทั้งหมด จึงมาถึงตรงนี้ด้วย
+        flash('ไม่พบไฟล์รูป — กรุณาเลือกไฟล์ (ขนาดรวมต่อครั้งไม่เกิน 100 MB)', 'danger');
         redirect($back);
     }
-    $mime = (new finfo(FILEINFO_MIME_TYPE))->file($f['tmp_name']);
-    $ext = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'][$mime] ?? null;
-    if (!$ext || !getimagesize($f['tmp_name'])) {
-        flash('รองรับเฉพาะไฟล์ JPG, PNG, WEBP', 'danger');
-        redirect($back);
+    $meta = image_meta_from_post($_POST);
+    $ok = 0;
+    foreach ($files as $f) {
+        [$ext, $err] = image_check_upload($f);
+        if ($err) {
+            flash($f['name'] . ': ' . $err, 'danger');
+            continue;
+        }
+        $iid = image_store($f, $ext, $type, (int) $id, $meta);
+        audit('create', 'image', $iid, $f['name']);
+        $ok++;
     }
-    $name = $type . '_' . $id . '_' . bin2hex(random_bytes(6)) . '.' . $ext;
-    if (!is_dir(config('upload_dir'))) mkdir(config('upload_dir'), 0775, true);
-    move_uploaded_file($f['tmp_name'], config('upload_dir') . '/' . $name);
-    $iid = db_insert('images', [$type . '_id' => (int) $id, 'file_path' => 'uploads/' . $name, 'caption' => nn($_POST['caption'] ?? null)]);
-    audit('create', 'image', $iid, $name);
-    flash('อัปโหลดรูปแล้ว');
+    if ($ok) flash("อัปโหลดรูปแล้ว $ok ไฟล์" . (function_exists('imagecreatetruecolor') ? '' : ' (เซิร์ฟเวอร์ไม่มี GD จึงไม่ได้สร้างภาพย่อ)'));
     redirect($back);
+}
+
+function admin_image_update(string $id): void
+{
+    require_login();
+    $img = q_one('SELECT * FROM images WHERE id = ?', [$id]);
+    if (!$img) abort();
+    db_update('images', (int) $id, image_meta_from_post($_POST));
+    audit('update', 'image', (int) $id, $img['file_path']);
+    flash('บันทึกข้อมูลรูปแล้ว');
+    redirect(image_back($img));
 }
 
 function admin_image_delete(string $id): void
@@ -349,11 +377,11 @@ function admin_image_delete(string $id): void
     require_login();
     $img = q_one('SELECT * FROM images WHERE id = ?', [$id]);
     if (!$img) abort();
-    @unlink(__DIR__ . '/../public/' . $img['file_path']);
+    image_delete_files($img);
     q('DELETE FROM images WHERE id = ?', [$id]);
     audit('delete', 'image', (int) $id, $img['file_path']);
     flash('ลบรูปแล้ว', 'warning');
-    redirect($img['species_id'] ? "admin/species/{$img['species_id']}" : "admin/strain/{$img['strain_id']}");
+    redirect(image_back($img));
 }
 
 // ---------------- Import CSV ----------------

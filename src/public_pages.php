@@ -102,7 +102,8 @@ function page_species_detail(string $id): void
     $sequences = q_all('SELECT sq.*, st.strain_code FROM sequences sq JOIN strains st ON st.id = sq.strain_id
         WHERE st.species_id = ? ORDER BY sq.locus, st.strain_code', [$id]);
     $pheno = phenotype_matrix('species_id', (int) $id);
-    $images = q_all('SELECT * FROM images WHERE species_id = ? OR strain_id IN (SELECT id FROM strains WHERE species_id = ?) ORDER BY id', [$id, $id]);
+    $images = q_all('SELECT im.*, st.strain_code FROM images im LEFT JOIN strains st ON st.id = im.strain_id
+        WHERE im.species_id = ? OR st.species_id = ? ORDER BY im.sort_order, (im.strain_id IS NOT NULL), st.strain_code, im.id', [$id, $id]);
     $bib = q_all('SELECT b.* FROM bibliography b JOIN species_bibliography sb ON sb.bib_id = b.id WHERE sb.species_id = ? ORDER BY b.year, b.citation', [$id]);
     $points = map_points($strains);
     view('species_detail', compact('sp', 'synonyms', 'strains', 'sequences', 'pheno', 'images', 'bib', 'points')
@@ -156,7 +157,7 @@ function page_strain_detail(string $code): void
     $sequences = q_all('SELECT * FROM sequences WHERE strain_id = ? ORDER BY locus', [$st['id']]);
     $pheno = phenotype_matrix('strain_id', (int) $st['id']);
     $pheno_sp = $st['species_id'] ? phenotype_matrix('species_id', (int) $st['species_id']) : [];
-    $images = q_all('SELECT * FROM images WHERE strain_id = ? ORDER BY id', [$st['id']]);
+    $images = q_all('SELECT im.*, NULL AS strain_code FROM images im WHERE im.strain_id = ? ORDER BY im.sort_order, im.id', [$st['id']]);
     $points = map_points([$st]);
     view('strain_detail', compact('st', 'sequences', 'pheno', 'pheno_sp', 'images', 'points') + ['title' => $st['strain_code']]);
 }
