@@ -1,0 +1,47 @@
+services:
+  web:
+    build: ./docker
+    container_name: yeastpyo_web
+    ports:
+      - "8180:80"
+    volumes:
+      - ./:/var/www/app
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_NAME: yeast_pyo
+      DB_USER: yeast
+      DB_PASS: yeast_pass
+      NCBI_EMAIL: ""        # ใส่อีเมลผู้ดูแลระบบ (NCBI ขอให้ระบุ)
+      NCBI_API_KEY: ""      # ไม่บังคับ: เพิ่มโควตาเป็น 10 req/s
+    depends_on:
+      - db
+
+  db:
+    image: mariadb:10.11
+    container_name: yeastpyo_db
+    ports:
+      - "3317:3306"
+    environment:
+      MARIADB_ROOT_PASSWORD: root_pass
+      MARIADB_DATABASE: yeast_pyo
+      MARIADB_USER: yeast
+      MARIADB_PASSWORD: yeast_pass
+    command: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci"]
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+
+  phpmyadmin:
+    image: phpmyadmin:5
+    container_name: yeastpyo_pma
+    ports:
+      - "8280:80"
+    environment:
+      PMA_HOST: db
+    depends_on:
+      - db
+
+volumes:
+  dbdata:

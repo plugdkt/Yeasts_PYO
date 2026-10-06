@@ -1,0 +1,4 @@
+# ห้ามรันสคริปต์ในโฟลเดอร์อัปโหลด
+<FilesMatch "\.(php\d?|phtml|phar|pl|py|cgi|sh)$">
+    Require all denied
+</FilesMatch>
